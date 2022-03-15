@@ -4,7 +4,6 @@ import DataTableComponent from "./DataTableComponent";
 import LoadingIndicatorComponent from "./LoadingIndicatorComponent";
 import SheetListComponent from "./SheetListComponent";
 import TestBtnComponent from "./TestBtnComponent";
-import { DataGrid } from "@mui/x-data-grid";
 import "./styles/Main.css";
 
 // Declare this so our linter knows that tableau is a global object
@@ -29,36 +28,13 @@ function MainComponent() {
       value: "test 2",
     },
   ]);
-  const [apiData, setApiData] = useState([]);
   const [printData, setPrintData] = useState([]);
+
+  const [apiData, setApiData] = useState([]);
 
   let unregisterEventFn;
 
-  const columns = [
-    { field: "id", headerName: "ID", width: 90 },
-    {
-      field: "State",
-      headerName: "State",
-      width: 150,
-      editable: true,
-    },
-    {
-      field: "value",
-      headerName: "value",
-      width: 150,
-      editable: true,
-    },
-  ];
-
-  const getDataFromApi = async (e) => {
-    e.preventDefault();
-    const data = await fetch(`/api/hello?name="test"`);
-    const json = await data.json();
-
-    if (json) {
-      setApiData(json);
-    }
-  };
+  useEffect(() => {}, []);
 
   useEffect(() => {
     tableau.extensions.initializeAsync().then(() => {
@@ -351,8 +327,11 @@ function MainComponent() {
           state = i === 0 ? d[0] : `${state}|${d[0]}`;
         });
         tmp.push({ State: state, value: inputValue });
-
+        debugger;
+        //push to DB
+        //setApiData(tmp)
         setData(tmp);
+
         setIsLoading(false);
         loadSelectedMarks();
       });
