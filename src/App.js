@@ -21,11 +21,11 @@ function MainComponent() {
   const [data, setData] = useState([
     {
       State: "Oregon",
-      value: "test 1",
+      Value: "test 1",
     },
     {
       State: "Oregon",
-      value: "test 2",
+      Value: "test 2",
     },
   ]);
   const [printData, setPrintData] = useState([]);
@@ -34,7 +34,25 @@ function MainComponent() {
 
   let unregisterEventFn;
 
-  useEffect(() => {}, []);
+  useEffect(() => {
+    let datas = "";
+    fetch("http://localhost:7071/api/countries")
+      .then((response) => {
+        return response.json();
+      })
+      .then((myJson) => {
+        console.log(myJson);
+        for (const x of myJson) {
+          datas = x;
+          let tmp = data;
+          console.log(data);
+          tmp.push(datas);
+          setData(tmp);
+        }
+
+        console.log(data);
+      });
+  }, []);
 
   useEffect(() => {
     tableau.extensions.initializeAsync().then(() => {
