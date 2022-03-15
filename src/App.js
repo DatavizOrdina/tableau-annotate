@@ -21,11 +21,11 @@ function MainComponent() {
   const [data, setData] = useState([
     {
       State: "Oregon",
-      Value: "test 1",
+      value: "test 1",
     },
     {
       State: "Oregon",
-      Value: "test 2",
+      value: "test 2",
     },
   ]);
   const [printData, setPrintData] = useState([]);
@@ -46,7 +46,12 @@ function MainComponent() {
           datas = x;
           let tmp = data;
           console.log(data);
-          tmp.push(datas);
+          console.log(datas.Value);
+          let json = {
+            State: datas.State,
+            value: datas.Value,
+          };
+          tmp.push(json);
           setData(tmp);
         }
 
@@ -212,9 +217,9 @@ function MainComponent() {
     let splitArray = [];
     data.forEach((d) => {
       var states = d.State.split("|");
-      states.forEach((state) => {
+      states.forEach((State) => {
         let obj = {
-          State: state,
+          State: State,
         };
         splitArray.push(obj);
       });
@@ -335,8 +340,6 @@ function MainComponent() {
           d.map((cell) => cell.formattedValue)
         );
 
-        // alert(JSON.stringify(marksData));
-
         let inputValue = document.getElementById("myInput").value;
 
         let tmp = data;
@@ -344,15 +347,104 @@ function MainComponent() {
         marksData.forEach((d, i) => {
           state = i === 0 ? d[0] : `${state}|${d[0]}`;
         });
+        //
+        alert("state: " + state);
+        //
         tmp.push({ State: state, value: inputValue });
-        debugger;
-        //push to DB
-        //setApiData(tmp)
+        let json = {
+          state: state,
+          value: inputValue,
+        };
+        fetch("http://localhost:7071/api/countries", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(json),
+        }).then((res) => {
+          alert(res);
+          console.log("Request complete! response:", res);
+        });
         setData(tmp);
-
-        setIsLoading(false);
-        loadSelectedMarks();
       });
+      //push to DB
+      //setApiData(tmp)
+      setIsLoading(false);
+      loadSelectedMarks();
+    }
+  };
+
+  const onClickDeleteBtn = (value) => {
+    if (value) {
+      const worksheet = getSelectedSheet();
+      setIsLoading(false);
+      worksheet.getSelectedMarksAsync().then((marks) => {
+        // Get the first DataTable for our selected marks (usually there is just one)
+        const worksheetData = marks.data[0];
+
+        // Map our data into the format which the data table component expects it
+        const rows = worksheetData.data.map((row) =>
+          row.map((cell) => cell.formattedValue)
+        );
+
+        if (rows.length === 0) return;
+
+        const headers = worksheetData.columns.map((column) => column.fieldName);
+
+        const keys = headers;
+        const values = rows;
+
+        let merged = [];
+        values.forEach((d) => {
+          merged.push(
+            keys.reduce((obj, key, index) => ({ ...obj, [key]: d[index] }), {})
+          );
+        });
+
+        let marksData = marks.data[0];
+        marksData = marksData.data.map((d) =>
+          d.map((cell) => cell.formattedValue)
+        );
+
+        let inputValue = document.getElementById("myInput").value;
+
+        let state = "";
+        marksData.forEach((d, i) => {
+          state = i === 0 ? d[0] : `${state}|${d[0]}`;
+        });
+        let tmp = data;
+        var index = data.indexOf(inputValue); //get index
+        tmp.splice(index, 1);
+        setData(tmp);
+        let theUrl = "http://localhost:7071/api/countries";
+        let json = {
+          State: state,
+          Value: inputValue,
+        };
+        alert(state, inputValue);
+        let query = Object.keys(json)
+          .map((k) => encodeURIComponent(k) + "=" + encodeURIComponent(json[k]))
+          .join("&");
+        let url = theUrl + "?" + query;
+        alert(url);
+        fetch(url, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+        })
+          .then((data) => data.text())
+          .then((text) => {
+            alert("request succeeded with JSON response", text);
+          })
+          .catch(function (error) {
+            alert("request failed", error);
+          });
+        //
+      });
+      //
+      //
+
+      //push to DB
+      //setApiData(tmp)
+      setIsLoading(false);
+      loadSelectedMarks();
     }
   };
 
@@ -397,7 +489,12 @@ function MainComponent() {
             onClick={renderViz}
           />
         </div>
-
+        <div style={{ display: "inline", float: "left" }}>
+          <TestBtnComponent
+            btnValue="Click me to delete state with given value"
+            onClick={onClickDeleteBtn}
+          />
+        </div>
         {/* <input type="text" id="myInput2" style={{ float: "left" }} />
         <TestBtnComponent
           btnValue="Click  to update"
