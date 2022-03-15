@@ -347,9 +347,7 @@ function MainComponent() {
         marksData.forEach((d, i) => {
           state = i === 0 ? d[0] : `${state}|${d[0]}`;
         });
-        //
-        alert("state: " + state);
-        //
+
         tmp.push({ State: state, value: inputValue });
         let json = {
           state: state,
@@ -360,8 +358,8 @@ function MainComponent() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(json),
         }).then((res) => {
-          alert(res);
           console.log("Request complete! response:", res);
+          document.getElementById("myInput").value = "";
         });
         setData(tmp);
       });
@@ -411,7 +409,7 @@ function MainComponent() {
           state = i === 0 ? d[0] : `${state}|${d[0]}`;
         });
         let tmp = data;
-        var index = data.indexOf(inputValue); //get index
+        var index = data.indexOf(inputValue);
         tmp.splice(index, 1);
         setData(tmp);
         let theUrl = "http://localhost:7071/api/countries";
@@ -419,19 +417,17 @@ function MainComponent() {
           State: state,
           Value: inputValue,
         };
-        alert(state, inputValue);
         let query = Object.keys(json)
           .map((k) => encodeURIComponent(k) + "=" + encodeURIComponent(json[k]))
           .join("&");
         let url = theUrl + "?" + query;
-        alert(url);
         fetch(url, {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
         })
           .then((data) => data.text())
           .then((text) => {
-            alert("request succeeded with JSON response", text);
+            document.getElementById("myInput").value = "";
           })
           .catch(function (error) {
             alert("request failed", error);
