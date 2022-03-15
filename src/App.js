@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { Button, Modal } from "react-bootstrap";
-import DataTableComponent from "./DataTableComponent";
 import LoadingIndicatorComponent from "./LoadingIndicatorComponent";
 import SheetListComponent from "./SheetListComponent";
 import TestBtnComponent from "./TestBtnComponent";
@@ -18,19 +17,8 @@ function MainComponent() {
   const [dataKey, setDataKey] = useState(1);
   const [filteredFields, setFilteredFields] = useState([]);
   const [dashboardName, setDashboardName] = useState("");
-  const [data, setData] = useState([
-    {
-      State: "Oregon",
-      value: "test 1",
-    },
-    {
-      State: "Oregon",
-      value: "test 2",
-    },
-  ]);
+  const [data, setData] = useState([]);
   const [printData, setPrintData] = useState([]);
-
-  const [apiData, setApiData] = useState([]);
 
   let unregisterEventFn;
 
@@ -45,8 +33,6 @@ function MainComponent() {
         for (const x of myJson) {
           datas = x;
           let tmp = data;
-          console.log(data);
-          console.log(datas.Value);
           let json = {
             State: datas.State,
             value: datas.Value,
@@ -54,8 +40,6 @@ function MainComponent() {
           tmp.push(json);
           setData(tmp);
         }
-
-        console.log(data);
       });
   }, []);
 
@@ -235,21 +219,11 @@ function MainComponent() {
       return res;
     }, {});
 
-    // alert(JSON.stringify(result));
-
     const vizInputSpec = {
       description: "A sample viz", // optional parameter.
       size: { width: 400, height: 300 },
       data: {
         values: result,
-        // values: [
-        //   { Product: "Paper", Sales: 28, Region: "Central" },
-        //   { Product: "Pens", Sales: 45, Region: "East" },
-        //   { Product: "Rulers", Sales: 35, Region: "East" },
-        //   { Product: "Rulers", Sales: 43, Region: "South" },
-        //   { Product: "Paper", Sales: 50, Region: "West" },
-        //   { Product: "Pens", Sales: 56, Region: "West" },
-        // ],
       },
       mark: markType,
       markcolor: "#FFED5F", // may not get used in viz if color is encoded in viz.
@@ -304,11 +278,6 @@ function MainComponent() {
   }
 
   const onClickTestBtn = (value) => {
-    //// TODO ////
-    // Get Selected state(s)
-    // Get Entered value
-    // push to data
-
     if (value) {
       const worksheet = getSelectedSheet();
       setIsLoading(false);
@@ -434,11 +403,6 @@ function MainComponent() {
           });
         //
       });
-      //
-      //
-
-      //push to DB
-      //setApiData(tmp)
       setIsLoading(false);
       loadSelectedMarks();
     }
