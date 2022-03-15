@@ -1,25 +1,441 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useEffect, useState } from "react";
+import { Button, Modal } from "react-bootstrap";
+import DataTableComponent from "./DataTableComponent";
+import LoadingIndicatorComponent from "./LoadingIndicatorComponent";
+import SheetListComponent from "./SheetListComponent";
+import TestBtnComponent from "./TestBtnComponent";
+import { DataGrid } from "@mui/x-data-grid";
+import "./styles/Main.css";
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+// Declare this so our linter knows that tableau is a global object
+/* global tableau */
+
+function MainComponent() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedSheet, setSelectedSheet] = useState(undefined);
+  const [sheetNames, setSheetNames] = useState([]);
+  const [rows, setRows] = useState([]);
+  const [headers, setHeaders] = useState([]);
+  const [dataKey, setDataKey] = useState(1);
+  const [filteredFields, setFilteredFields] = useState([]);
+  const [dashboardName, setDashboardName] = useState("");
+  const [data, setData] = useState([
+    {
+      State: "Oregon",
+      value: "test 1",
+    },
+    {
+      State: "Oregon",
+      value: "test 2",
+    },
+  ]);
+  const [apiData, setApiData] = useState([]);
+  const [printData, setPrintData] = useState([]);
+
+  let unregisterEventFn;
+
+  const columns = [
+    { field: "id", headerName: "ID", width: 90 },
+    {
+      field: "State",
+      headerName: "State",
+      width: 150,
+      editable: true,
+    },
+    {
+      field: "value",
+      headerName: "value",
+      width: 150,
+      editable: true,
+    },
+  ];
+
+  const getDataFromApi = async (e) => {
+    e.preventDefault();
+    const data = await fetch(`/api/hello?name="test"`);
+    const json = await data.json();
+
+    if (json) {
+      setApiData(json);
+    }
+  };
+
+  useEffect(() => {
+    tableau.extensions.initializeAsync().then(() => {
+      const selectedSheet = tableau.extensions.settings.get("sheet");
+      setSelectedSheet(selectedSheet);
+
+      const sheetNames =
+        tableau.extensions.dashboardContent.dashboard.worksheets.map(
+          (worksheet) => worksheet.name
+        );
+      setSheetNames(sheetNames);
+
+      const dashboardName = tableau.extensions.dashboardContent.dashboard.name;
+      setDashboardName(dashboardName);
+
+      const sheetSelected = !!selectedSheet;
+      setIsLoading(sheetSelected);
+
+      if (selectedSheet) {
+        loadSelectedMarks(selectedSheet);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const getSelectedSheet = (sheet) => {
+    const sheetName = sheet || selectedSheet;
+    return tableau.extensions.dashboardContent.dashboard.worksheets.find(
+      (worksheet) => worksheet.name === sheetName
+    );
+  };
+
+  const onSelectSheet = (sheet) => {
+    tableau.extensions.settings.set("sheet", sheet);
+    setIsLoading(true);
+    tableau.extensions.settings.saveAsync().then(() => {
+      setSelectedSheet(sheet);
+      setFilteredFields([]);
+      loadSelectedMarks(sheet);
+    });
+  };
+
+  const loadSelectedMarks = (sheet) => {
+    if (unregisterEventFn) {
+      unregisterEventFn();
+    }
+
+    const worksheet = getSelectedSheet(sheet);
+    worksheet.getSelectedMarksAsync().then((marks) => {
+      // Get the first DataTable for our selected marks (usually there is just one)
+      const worksheetData = marks.data[0];
+
+      // Map our data into the format which the data table component expects it
+      const rows = worksheetData.data.map((row) =>
+        row.map((cell) => cell.formattedValue)
+      );
+
+      const headers = worksheetData.columns.map((column) => column.fieldName);
+
+      // Get key of selection (state)
+      // Load all values of rows with key
+
+      let outData = [];
+      rows.forEach((d) => {
+        data.forEach((a) => {
+          var states = a.State.split("|");
+          if (states.includes(d[0])) outData.push(a);
+          // if (a.State === d[0]) {
+          //   outData.push(a);
+          // }
+        });
+      });
+
+      if (rows.length === 0) outData = data;
+
+      // make unique
+      outData = [...new Set(outData)];
+
+      setPrintData(outData);
+      setDataKey(Date.now());
+      setIsLoading(false);
+      renderViz();
+    });
+
+    unregisterEventFn = worksheet.addEventListener(
+      tableau.TableauEventType.MarkSelectionChanged,
+      () => {
+        // setIsLoading(true);
+        loadSelectedMarks(sheet);
+      }
+    );
+  };
+
+  const onResetFilters = () => {
+    const worksheet = getSelectedSheet();
+    // setIsLoading(true);
+    const promises = filteredFields.map((fieldName) =>
+      worksheet.clearFilterAsync(fieldName)
+    );
+    Promise.all(promises).then(() => {
+      setFilteredFields([]);
+      setIsLoading(false);
+    });
+  };
+
+  const selectMarks = (states) => {
+    const worksheet = getSelectedSheet();
+    var statesFormatted = states.split("|");
+
+    worksheet.selectMarksByValueAsync(
+      [
+        {
+          fieldName: "State",
+          value: statesFormatted,
+        },
+      ],
+      tableau.SelectionUpdateType.Replace
+    );
+  };
+
+  const deSelectMarks = () => {
+    const worksheet = getSelectedSheet();
+    worksheet.clearSelectedMarksAsync().then(function () {
+      console.log("Your marks selection has been cleared!");
+    });
+  };
+
+  const mainContent = (
+    <div>
+      <div style={{ position: "relative", float: "left" }}>
+        {printData.map((d, key) => {
+          return (
+            <div
+              id={"row" + key}
+              class="row"
+              onClick={() => selectMarks(d.State)}
+            >
+              <p style={{ paddingLeft: "20px" }}>
+                {d.State}: {d.value}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+      <div
+        id="viz-container"
+        style={{ position: "relative", float: "right" }}
+      ></div>
     </div>
   );
+
+  // This function creates and displays a viz image.
+  function addVizImage(markType, palette) {
+    // Building the input specification object that is used to create the viz image.
+    // Data values used in the viz image are prefilled.
+
+    let splitArray = [];
+    data.forEach((d) => {
+      var states = d.State.split("|");
+      states.forEach((state) => {
+        let obj = {
+          State: state,
+        };
+        splitArray.push(obj);
+      });
+    });
+
+    var result = [];
+    splitArray.reduce(function (res, value) {
+      if (!res[value.State]) {
+        res[value.State] = { State: value.State, cnt: 0 };
+        result.push(res[value.State]);
+      }
+      res[value.State].cnt += 1;
+      return res;
+    }, {});
+
+    // alert(JSON.stringify(result));
+
+    const vizInputSpec = {
+      description: "A sample viz", // optional parameter.
+      size: { width: 400, height: 300 },
+      data: {
+        values: result,
+        // values: [
+        //   { Product: "Paper", Sales: 28, Region: "Central" },
+        //   { Product: "Pens", Sales: 45, Region: "East" },
+        //   { Product: "Rulers", Sales: 35, Region: "East" },
+        //   { Product: "Rulers", Sales: 43, Region: "South" },
+        //   { Product: "Paper", Sales: 50, Region: "West" },
+        //   { Product: "Pens", Sales: 56, Region: "West" },
+        // ],
+      },
+      mark: markType,
+      markcolor: "#FFED5F", // may not get used in viz if color is encoded in viz.
+      encoding: {
+        columns: {
+          field: "State",
+          type: tableau.VizImageEncodingType.Discrete,
+        },
+        rows: { field: "cnt", type: tableau.VizImageEncodingType.Continuous },
+        color: {
+          field: "cnt",
+          type: tableau.VizImageEncodingType.Discrete,
+          palette,
+        },
+      },
+    };
+
+    // defaulting values if null.
+    if (markType === null) {
+      vizInputSpec.mark = tableau.MarkType.Bar;
+    }
+    if (palette === null) {
+      vizInputSpec.encoding.color.palette = "tableau20_10_0";
+    }
+
+    // making call to create viz image from the input specifications.
+    tableau.extensions.createVizImageAsync(vizInputSpec).then(
+      function (svg) {
+        const blob = new Blob([svg], { type: "image/svg+xml" });
+        const url = URL.createObjectURL(blob);
+        const image = document.createElement("img");
+        image.src = url;
+        image.style.maxWidth = "100%";
+        image.style.maxHeight = "100%";
+        image.className = "center-block";
+        const vizApiElement = document.getElementById("viz-container");
+        // clearing UI and adding in new viz.
+        vizApiElement.innerHTML = "";
+        vizApiElement.appendChild(image);
+        image.addEventListener(
+          "load",
+          function () {
+            return URL.revokeObjectURL(url);
+          },
+          { once: true }
+        );
+      },
+      function (err) {
+        console.log(err);
+      }
+    );
+  }
+
+  const onClickTestBtn = (value) => {
+    //// TODO ////
+    // Get Selected state(s)
+    // Get Entered value
+    // push to data
+
+    if (value) {
+      const worksheet = getSelectedSheet();
+      setIsLoading(false);
+      worksheet.getSelectedMarksAsync().then((marks) => {
+        // Get the first DataTable for our selected marks (usually there is just one)
+        const worksheetData = marks.data[0];
+
+        // Map our data into the format which the data table component expects it
+        const rows = worksheetData.data.map((row) =>
+          row.map((cell) => cell.formattedValue)
+        );
+
+        if (rows.length === 0) return;
+
+        const headers = worksheetData.columns.map((column) => column.fieldName);
+
+        const keys = headers;
+        const values = rows;
+
+        let merged = [];
+        values.forEach((d) => {
+          merged.push(
+            keys.reduce((obj, key, index) => ({ ...obj, [key]: d[index] }), {})
+          );
+        });
+
+        let marksData = marks.data[0];
+        marksData = marksData.data.map((d) =>
+          d.map((cell) => cell.formattedValue)
+        );
+
+        // alert(JSON.stringify(marksData));
+
+        let inputValue = document.getElementById("myInput").value;
+
+        let tmp = data;
+        let state = "";
+        marksData.forEach((d, i) => {
+          state = i === 0 ? d[0] : `${state}|${d[0]}`;
+        });
+        tmp.push({ State: state, value: inputValue });
+
+        setData(tmp);
+        setIsLoading(false);
+        loadSelectedMarks();
+      });
+    }
+  };
+
+  const renderViz = () => {
+    addVizImage("bar", "tableau20_10_0");
+  };
+
+  let output = (
+    <div>
+      <div className="summary_header">
+        <h4>
+          Marks for <span className="sheet_name">{selectedSheet}</span>
+          <Button variant="link" onClick={() => setSelectedSheet(undefined)}>
+            <img className="icon" src="./setting.svg" alt="" />
+          </Button>
+          <Button
+            variant="link"
+            onClick={onResetFilters}
+            disabled={filteredFields.length === 0}
+          >
+            <img className="icon" src="./undo-arrow.svg" alt="" />
+          </Button>
+        </h4>
+        <div style={{ display: "inline", float: "left" }}>
+          <input type="text" id="myInput" />
+        </div>
+        <div style={{ display: "inline", float: "left" }}>
+          <TestBtnComponent
+            btnValue="Click me to insert"
+            onClick={onClickTestBtn}
+          />
+        </div>
+        <div style={{ display: "inline", float: "left" }}>
+          <TestBtnComponent
+            btnValue="Click me to clear selection"
+            onClick={deSelectMarks}
+          />
+        </div>
+        <div style={{ display: "inline", float: "left" }}>
+          <TestBtnComponent
+            btnValue="Click me to render viz"
+            onClick={renderViz}
+          />
+        </div>
+
+        {/* <input type="text" id="myInput2" style={{ float: "left" }} />
+        <TestBtnComponent
+          btnValue="Click  to update"
+          onClick={onClickUpdateBtn}
+          style={{ float: "left" }}
+        /> */}
+      </div>
+      {mainContent}
+    </div>
+  );
+
+  if (isLoading) {
+    output = <LoadingIndicatorComponent msg="Loading" />;
+  }
+
+  if (!selectedSheet) {
+    output = (
+      <Modal show>
+        <Modal.Header>
+          <Modal.Title>
+            Choose a Sheet from{" "}
+            <span className="sheet_name">{dashboardName}</span>
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <SheetListComponent
+            sheetNames={sheetNames}
+            onSelectSheet={onSelectSheet}
+          />
+        </Modal.Body>
+      </Modal>
+    );
+  }
+
+  return <>{output}</>;
 }
 
-export default App;
+export default MainComponent;
