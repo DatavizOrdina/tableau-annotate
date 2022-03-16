@@ -322,7 +322,7 @@ function MainComponent() {
           state: state,
           value: inputValue,
         };
-        fetch("http://localhost:7071/api/countries", {
+        fetch("https://oscarsapi.azurewebsites.net/api/countries", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(json),
@@ -381,7 +381,7 @@ function MainComponent() {
         var index = data.indexOf(inputValue);
         tmp.splice(index, 1);
         setData(tmp);
-        let theUrl = "http://localhost:7071/api/countries";
+        let theUrl = "https://oscarsapi.azurewebsites.net/api/countries";
         let json = {
           State: state,
           Value: inputValue,
