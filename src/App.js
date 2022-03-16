@@ -24,7 +24,7 @@ function MainComponent() {
 
   useEffect(() => {
     let datas = "";
-    fetch("http://localhost:7071/api/countries")
+    fetch("https://oscarsapi.azurewebsites.net/api/countries")
       .then((response) => {
         return response.json();
       })
