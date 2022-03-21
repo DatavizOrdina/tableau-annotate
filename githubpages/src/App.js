@@ -123,7 +123,7 @@ function MainComponent() {
       setPrintData(outData);
       setDataKey(Date.now());
       setIsLoading(false);
-      renderViz();
+      // renderViz();
     });
 
     unregisterEventFn = worksheet.addEventListener(
@@ -408,9 +408,9 @@ function MainComponent() {
     }
   };
 
-  const renderViz = () => {
-    addVizImage("bar", "tableau20_10_0");
-  };
+  // const renderViz = () => {
+  //   addVizImage("bar", "tableau20_10_0");
+  // };
 
   let output = (
     <div>
@@ -443,12 +443,12 @@ function MainComponent() {
             onClick={deSelectMarks}
           />
         </div>
-        <div style={{ display: "inline", float: "left" }}>
+        {/* <div style={{ display: "inline", float: "left" }}>
           <TestBtnComponent
             btnValue="Click me to render viz"
             onClick={renderViz}
           />
-        </div>
+        </div> */}
         <div style={{ display: "inline", float: "left" }}>
           <TestBtnComponent
             btnValue="Click me to delete state with given value"
