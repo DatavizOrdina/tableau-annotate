@@ -38,6 +38,7 @@ function MainComponent() {
           let json = {
             State: datas.State,
             value: datas.Value,
+            user: datas.User,
           };
           tmp.push(json);
           setData(tmp);
@@ -183,13 +184,6 @@ function MainComponent() {
       worksheet.clearSelectedMarksAsync().then(function () {
         console.log("Your marks selection has been cleared!");
       });
-      // do something with the worksheets..
-      // console.log("The worksheet name is " + worksheet.name);
-      // if (worksheet.name == "CurrentUser") {
-      //   worksheet.getSummaryDataAsync().then(function (sumdata) {
-      //     console.log(sumdata.data[0][0].value);
-      //   });
-      // }
     });
   };
 
@@ -204,7 +198,7 @@ function MainComponent() {
               onClick={() => selectMarks(d.State)}
             >
               <p style={{ paddingLeft: "20px" }}>
-                {d.State}: {d.value}
+                {d.State}: {d.value} "by" {d.user}
               </p>
             </div>
           );
@@ -341,10 +335,11 @@ function MainComponent() {
           state = i === 0 ? d[0] : `${state}|${d[0]}`;
         });
 
-        tmp.push({ State: state, value: inputValue });
+        tmp.push({ State: state, value: inputValue, user: username });
         let json = {
           state: state,
           value: inputValue,
+          user: username,
         };
         fetch("https://oscarsapi.azurewebsites.net/api/countries", {
           method: "POST",
@@ -457,14 +452,11 @@ function MainComponent() {
           <input type="text" id="myInput" />
         </div>
         <div style={{ display: "inline", float: "left" }}>
-          <TestBtnComponent
-            btnValue="Click me to insert"
-            onClick={onClickTestBtn}
-          />
+          <TestBtnComponent btnValue="Add note" onClick={onClickTestBtn} />
         </div>
         <div style={{ display: "inline", float: "left" }}>
           <TestBtnComponent
-            btnValue="Click me to clear selection"
+            btnValue="Clear Selection"
             onClick={deSelectMarks}
           />
         </div>
@@ -475,10 +467,7 @@ function MainComponent() {
           />
         </div> */}
         <div style={{ display: "inline", float: "left" }}>
-          <TestBtnComponent
-            btnValue="Click me to delete state with given value"
-            onClick={onClickDeleteBtn}
-          />
+          <TestBtnComponent btnValue="Delete Note" onClick={onClickDeleteBtn} />
         </div>
         {/* <input type="text" id="myInput2" style={{ float: "left" }} />
         <TestBtnComponent
