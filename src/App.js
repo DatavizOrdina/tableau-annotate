@@ -4,6 +4,7 @@ import LoadingIndicatorComponent from "./LoadingIndicatorComponent";
 import SheetListComponent from "./SheetListComponent";
 import TestBtnComponent from "./TestBtnComponent";
 import "./Main.css";
+import { async } from "q";
 
 // Declare this so our linter knows that tableau is a global object
 /* global tableau */
@@ -19,6 +20,7 @@ function MainComponent() {
   const [dashboardName, setDashboardName] = useState("");
   const [data, setData] = useState([]);
   const [printData, setPrintData] = useState([]);
+  const [username, setUserName] = useState([]);
 
   let unregisterEventFn;
 
@@ -123,6 +125,19 @@ function MainComponent() {
       setPrintData(outData);
       setDataKey(Date.now());
       setIsLoading(false);
+
+      let dashboard = tableau.extensions.dashboardContent.dashboard;
+      dashboard.worksheets.forEach(function (worksheet) {
+        // do something with the worksheets..
+        console.log("The worksheet name is " + worksheet.name);
+        if (worksheet.name == "CurrentUser") {
+          worksheet.getSummaryDataAsync().then(function (sumdata) {
+            console.log(sumdata.data[0][0].value);
+            setUserName(sumdata.data[0][0].value);
+          });
+        }
+      });
+
       // renderViz();
     });
 
@@ -163,9 +178,18 @@ function MainComponent() {
   };
 
   const deSelectMarks = () => {
-    const worksheet = getSelectedSheet();
-    worksheet.clearSelectedMarksAsync().then(function () {
-      console.log("Your marks selection has been cleared!");
+    let dashboard = tableau.extensions.dashboardContent.dashboard;
+    dashboard.worksheets.forEach(function (worksheet) {
+      worksheet.clearSelectedMarksAsync().then(function () {
+        console.log("Your marks selection has been cleared!");
+      });
+      // do something with the worksheets..
+      // console.log("The worksheet name is " + worksheet.name);
+      // if (worksheet.name == "CurrentUser") {
+      //   worksheet.getSummaryDataAsync().then(function (sumdata) {
+      //     console.log(sumdata.data[0][0].value);
+      //   });
+      // }
     });
   };
 
@@ -328,6 +352,7 @@ function MainComponent() {
           body: JSON.stringify(json),
         }).then((res) => {
           console.log("Request complete! response:", res);
+          console.log(username);
           document.getElementById("myInput").value = "";
         });
         setData(tmp);
