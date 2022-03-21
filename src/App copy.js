@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Button, Modal } from "react-bootstrap";
-import DataTableComponent from "./DataTableComponent";
-import LoadingIndicatorComponent from "./LoadingIndicatorComponent";
-import SheetListComponent from "./SheetListComponent";
-import TestBtnComponent from "./TestBtnComponent";
-import "./styles/Main.css";
+import DataTableComponent from "DataTableComponent";
+import LoadingIndicatorComponent from "LoadingIndicatorComponent";
+import SheetListComponent from "SheetListComponent";
+import TestBtnComponent from "TestBtnComponent";
+import "Main.css";
 
 // Declare this so our linter knows that tableau is a global object
 /* global tableau */

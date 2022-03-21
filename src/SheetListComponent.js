@@ -1,12 +1,14 @@
-import React from 'react';
-import { Button } from 'react-bootstrap';
-import './styles/SheetList.css';
+import React from "react";
+import { Button } from "react-bootstrap";
+import "./SheetList.css";
 
-function SheetListComponent (props) {
+function SheetListComponent(props) {
   const makeSheetButton = (sheetName) => {
     return (
       <Button
-        key={sheetName} variant='light' block
+        key={sheetName}
+        variant="light"
+        block
         onClick={() => props.onSelectSheet(sheetName)}
       >
         {sheetName}
@@ -14,13 +16,11 @@ function SheetListComponent (props) {
     );
   };
 
-  const sheetButtons = props.sheetNames.map(sheetName => makeSheetButton(sheetName));
-
-  return (
-    <div>
-      {sheetButtons}
-    </div>
+  const sheetButtons = props.sheetNames.map((sheetName) =>
+    makeSheetButton(sheetName)
   );
+
+  return <div>{sheetButtons}</div>;
 }
 
 export default SheetListComponent;
