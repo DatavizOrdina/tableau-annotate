@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/tableau-annotate/static/css/main.3dbb4f63.css",
-    "main.js": "/tableau-annotate/static/js/main.c99d5e05.js",
+    "main.js": "/tableau-annotate/static/js/main.91bd2cfc.js",
     "index.html": "/tableau-annotate/index.html",
     "main.3dbb4f63.css.map": "/tableau-annotate/static/css/main.3dbb4f63.css.map",
-    "main.c99d5e05.js.map": "/tableau-annotate/static/js/main.c99d5e05.js.map"
+    "main.91bd2cfc.js.map": "/tableau-annotate/static/js/main.91bd2cfc.js.map"
   },
   "entrypoints": [
     "static/css/main.3dbb4f63.css",
-    "static/js/main.c99d5e05.js"
+    "static/js/main.91bd2cfc.js"
   ]
 }
