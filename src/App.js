@@ -25,29 +25,6 @@ function MainComponent() {
   let unregisterEventFn;
 
   useEffect(() => {
-    let datas = "";
-    fetch("https://oscarsapi.azurewebsites.net/api/countries")
-      .then((response) => {
-        return response.json();
-      })
-      .then((myJson) => {
-        console.log(myJson);
-        for (const x of myJson) {
-          datas = x;
-          let tmp = data;
-          let json = {
-            State: datas.State,
-            value: datas.Value,
-            user: datas.User,
-            date: datas.Date,
-          };
-          tmp.push(json);
-          setData(tmp);
-        }
-      });
-  }, []);
-
-  useEffect(() => {
     tableau.extensions.initializeAsync().then(() => {
       const selectedSheet = tableau.extensions.settings.get("sheet");
       setSelectedSheet(selectedSheet);
@@ -68,6 +45,27 @@ function MainComponent() {
         loadSelectedMarks(selectedSheet);
       }
     });
+    let datas = "";
+    fetch("https://oscarsapi.azurewebsites.net/api/countries")
+      .then((response) => {
+        return response.json();
+      })
+      .then((myJson) => {
+        console.log(myJson);
+        for (const x of myJson) {
+          datas = x;
+          let tmp = data;
+          var alterDate = datas.Date.substring(0, 10);
+          let json = {
+            State: datas.State,
+            value: datas.Value,
+            user: datas.User,
+            date: alterDate,
+          };
+          tmp.push(json);
+          setData(tmp);
+        }
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -199,7 +197,7 @@ function MainComponent() {
               onClick={() => selectMarks(d.State)}
             >
               <p style={{ paddingLeft: "20px" }}>
-                {d.user} at {d.date} :: {d.State} : {d.value}
+                {d.user} on {d.date} :: {d.State} : {d.value}
               </p>
             </div>
           );
