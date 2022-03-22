@@ -39,6 +39,7 @@ function MainComponent() {
             State: datas.State,
             value: datas.Value,
             user: datas.User,
+            date: datas.Date,
           };
           tmp.push(json);
           setData(tmp);
@@ -198,7 +199,7 @@ function MainComponent() {
               onClick={() => selectMarks(d.State)}
             >
               <p style={{ paddingLeft: "20px" }}>
-                {d.State}: {d.value} "by" {d.user}
+                {d.user} at {d.date} :: {d.State} : {d.value}
               </p>
             </div>
           );
@@ -334,12 +335,13 @@ function MainComponent() {
         marksData.forEach((d, i) => {
           state = i === 0 ? d[0] : `${state}|${d[0]}`;
         });
+        var dateISO = new Date().toISOString();
 
-        tmp.push({ State: state, value: inputValue, user: username });
         let json = {
           state: state,
           value: inputValue,
           user: username,
+          date: dateISO,
         };
         fetch("https://oscarsapi.azurewebsites.net/api/countries", {
           method: "POST",
@@ -349,6 +351,13 @@ function MainComponent() {
           console.log("Request complete! response:", res);
           console.log(username);
           document.getElementById("myInput").value = "";
+        });
+        var alterDate = dateISO.substring(0, 10);
+        tmp.push({
+          State: state,
+          value: inputValue,
+          user: username,
+          date: alterDate,
         });
         setData(tmp);
       });
