@@ -1,48 +1,48 @@
 import React, { useEffect, useState } from "react";
 import { Button, Modal } from "react-bootstrap";
-import LoadingIndicatorComponent from "./LoadingIndicatorComponent";
 import SheetListComponent from "./SheetListComponent";
 import TestBtnComponent from "./TestBtnComponent";
 import "./styles/Main.css";
+
+// Usefull link: https://nerdyandnoisy.com/building-your-first-tableau-extension/
 
 // Declare this so our linter knows that tableau is a global object
 /* global tableau */
 
 function MainComponent() {
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedSheet, setSelectedSheet] = useState(undefined);
   const [sheetNames, setSheetNames] = useState([]);
-  const [rows, setRows] = useState([]);
-  const [headers, setHeaders] = useState([]);
-  const [dataKey, setDataKey] = useState(1);
-  const [filteredFields, setFilteredFields] = useState([]);
   const [dashboardName, setDashboardName] = useState("");
+
   const [data, setData] = useState([]);
   const [printData, setPrintData] = useState([]);
 
   let unregisterEventFn;
 
+  ///////////////////////////////////////////////////////////////////////////
+  // INIT FUNCTIONS                                                        //
+  ///////////////////////////////////////////////////////////////////////////
+
+  // Load all existing comments on initialization:
   useEffect(() => {
-    let datas = "";
     fetch("https://oscarsapi.azurewebsites.net/api/countries")
       .then((response) => {
         return response.json();
       })
       .then((myJson) => {
-        console.log(myJson);
         for (const x of myJson) {
-          datas = x;
-          let tmp = data;
           let json = {
-            State: datas.State,
-            value: datas.Value,
+            State: x.State,
+            value: x.Value,
           };
-          tmp.push(json);
-          setData(tmp);
+          data.push(json);
+          setData(data);
         }
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Code that needs to be executed post the extension initialization
   useEffect(() => {
     tableau.extensions.initializeAsync().then(() => {
       const selectedSheet = tableau.extensions.settings.get("sheet");
@@ -57,93 +57,99 @@ function MainComponent() {
       const dashboardName = tableau.extensions.dashboardContent.dashboard.name;
       setDashboardName(dashboardName);
 
+      // !! converts Object to boolean. If it was falsey (e.g. 0, null, undefined, etc.), it will be false, otherwise, true.
       const sheetSelected = !!selectedSheet;
-      setIsLoading(sheetSelected);
-
-      if (selectedSheet) {
+      if (sheetSelected) {
         loadSelectedMarks(selectedSheet);
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const getSelectedSheet = (sheet) => {
-    const sheetName = sheet || selectedSheet;
-    return tableau.extensions.dashboardContent.dashboard.worksheets.find(
-      (worksheet) => worksheet.name === sheetName
-    );
-  };
+  ///////////////////////////////////////////////////////////////////////////
+  // CLICK EVENTS                                                          //
+  ///////////////////////////////////////////////////////////////////////////
 
+  // On select sheet store the sheet in the settings, so the user does not get the prompt every time.
   const onSelectSheet = (sheet) => {
     tableau.extensions.settings.set("sheet", sheet);
-    setIsLoading(true);
     tableau.extensions.settings.saveAsync().then(() => {
       setSelectedSheet(sheet);
-      setFilteredFields([]);
       loadSelectedMarks(sheet);
     });
   };
 
-  const loadSelectedMarks = (sheet) => {
-    if (unregisterEventFn) {
-      unregisterEventFn();
-    }
+  const onClickInsertBtn = () => {
+    let value = document.getElementById("myInput").value;
+    if (value) {
+      const worksheet = getSelectedSheet();
+      worksheet.getSelectedMarksAsync().then((marks) => {
+        let marksData = getTableauMarksData(marks);
+        if (marksData.length === 0) return;
 
-    const worksheet = getSelectedSheet(sheet);
-    worksheet.getSelectedMarksAsync().then((marks) => {
-      // Get the first DataTable for our selected marks (usually there is just one)
-      const worksheetData = marks.data[0];
+        let json = {
+          State: getStatesFromSelectedMarks(marksData),
+          value: value,
+        };
 
-      // Map our data into the format which the data table component expects it
-      const rows = worksheetData.data.map((row) =>
-        row.map((cell) => cell.formattedValue)
-      );
-
-      const headers = worksheetData.columns.map((column) => column.fieldName);
-
-      // Get key of selection (state)
-      // Load all values of rows with key
-
-      let outData = [];
-      rows.forEach((d) => {
-        data.forEach((a) => {
-          var states = a.State.split("|");
-          if (states.includes(d[0])) outData.push(a);
-          // if (a.State === d[0]) {
-          //   outData.push(a);
-          // }
+        fetch("https://oscarsapi.azurewebsites.net/api/countries", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(json),
+        }).then((res) => {
+          console.log("Request complete! response:", res);
         });
+
+        data.push(json);
+        document.getElementById("myInput").value = "";
+        setData(data);
       });
-
-      if (rows.length === 0) outData = data;
-
-      // make unique
-      outData = [...new Set(outData)];
-
-      setPrintData(outData);
-      setDataKey(Date.now());
-      setIsLoading(false);
-      renderViz();
-    });
-
-    unregisterEventFn = worksheet.addEventListener(
-      tableau.TableauEventType.MarkSelectionChanged,
-      () => {
-        // setIsLoading(true);
-        loadSelectedMarks(sheet);
-      }
-    );
+      loadSelectedMarks();
+    }
   };
 
-  const onResetFilters = () => {
+  const onClickDeleteBtn = () => {
+    let value = document.getElementById("myInput").value;
+    if (value) {
+      const worksheet = getSelectedSheet();
+      worksheet.getSelectedMarksAsync().then((marks) => {
+        let marksData = getTableauMarksData(marks);
+        if (marksData.length === 0) return;
+
+        let tmp = data;
+        var index = data.indexOf(value);
+        tmp.splice(index, 1);
+        setData(tmp);
+        let theUrl = "https://oscarsapi.azurewebsites.net/api/countries";
+        let json = {
+          State: getStatesFromSelectedMarks(marksData),
+          value: value,
+        };
+        let query = Object.keys(json)
+          .map((k) => encodeURIComponent(k) + "=" + encodeURIComponent(json[k]))
+          .join("&");
+        let url = theUrl + "?" + query;
+        fetch(url, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+        })
+          .then((data) => data.text())
+          .then((text) => {
+            document.getElementById("myInput").value = "";
+          })
+          .catch(function (error) {
+            alert("request failed", error);
+          });
+        //
+      });
+      loadSelectedMarks();
+    }
+  };
+
+  const deSelectMarks = () => {
     const worksheet = getSelectedSheet();
-    // setIsLoading(true);
-    const promises = filteredFields.map((fieldName) =>
-      worksheet.clearFilterAsync(fieldName)
-    );
-    Promise.all(promises).then(() => {
-      setFilteredFields([]);
-      setIsLoading(false);
+    worksheet.clearSelectedMarksAsync().then(function () {
+      console.log("Your marks selection has been cleared!");
     });
   };
 
@@ -162,36 +168,71 @@ function MainComponent() {
     );
   };
 
-  const deSelectMarks = () => {
-    const worksheet = getSelectedSheet();
-    worksheet.clearSelectedMarksAsync().then(function () {
-      console.log("Your marks selection has been cleared!");
-    });
+  const renderViz = () => {
+    addVizImage("bar", "tableau20_10_0");
   };
 
-  const mainContent = (
-    <div>
-      <div style={{ position: "relative", float: "left" }}>
-        {printData.map((d, key) => {
-          return (
-            <div
-              id={"row" + key}
-              class="row"
-              onClick={() => selectMarks(d.State)}
-            >
-              <p style={{ paddingLeft: "20px" }}>
-                {d.State}: {d.value}
-              </p>
-            </div>
-          );
-        })}
-      </div>
-      <div
-        id="viz-container"
-        style={{ position: "relative", float: "right" }}
-      ></div>
-    </div>
-  );
+  ///////////////////////////////////////////////////////////////////////////
+  // HELPER FUNCTIONS                                                      //
+  ///////////////////////////////////////////////////////////////////////////
+
+  const loadSelectedMarks = (sheet) => {
+    if (unregisterEventFn) {
+      unregisterEventFn();
+    }
+    const worksheet = getSelectedSheet(sheet);
+    worksheet.getSelectedMarksAsync().then((marks) => {
+      let marksData = getTableauMarksData(marks);
+      let parsedMarksData = parseTableauMarksData(marksData);
+      setPrintData(parsedMarksData);
+      renderViz();
+    });
+    unregisterEventFn = worksheet.addEventListener(
+      tableau.TableauEventType.MarkSelectionChanged,
+      () => {
+        loadSelectedMarks(sheet);
+      }
+    );
+  };
+
+  const getTableauMarksData = (marks) => {
+    let marksData = marks.data[0].data.map((d) =>
+      d.map((cell) => cell.formattedValue)
+    );
+    return marksData;
+  };
+
+  const parseTableauMarksData = (marks) => {
+    let outData = [];
+    marks.forEach((d) => {
+      data.forEach((a) => {
+        var states = a.State.split("|");
+        if (states.includes(d[0])) outData.push(a);
+      });
+    });
+    if (marks.length === 0) outData = data; // when no marks selected, show all marks
+    outData = [...new Set(outData)]; // make unique
+    return outData;
+  };
+
+  const getStatesFromSelectedMarks = (marksData) => {
+    let state = "";
+    marksData.forEach((d, i) => {
+      state = i === 0 ? d[0] : `${state}|${d[0]}`;
+    });
+    return state;
+  };
+
+  const getSelectedSheet = (sheet) => {
+    const sheetName = sheet || selectedSheet;
+    return tableau.extensions.dashboardContent.dashboard.worksheets.find(
+      (worksheet) => worksheet.name === sheetName
+    );
+  };
+
+  ///////////////////////////////////////////////////////////////////////////
+  // FUNCTIONS RELATED TO RENDERING TABLEAU VIZ                            //
+  ///////////////////////////////////////////////////////////////////////////
 
   // This function creates and displays a viz image.
   function addVizImage(markType, palette) {
@@ -277,140 +318,33 @@ function MainComponent() {
     );
   }
 
-  const onClickTestBtn = (value) => {
-    if (value) {
-      const worksheet = getSelectedSheet();
-      setIsLoading(false);
-      worksheet.getSelectedMarksAsync().then((marks) => {
-        // Get the first DataTable for our selected marks (usually there is just one)
-        const worksheetData = marks.data[0];
+  ///////////////////////////////////////////////////////////////////////////
+  // JSX                                                                   //
+  ///////////////////////////////////////////////////////////////////////////
 
-        // Map our data into the format which the data table component expects it
-        const rows = worksheetData.data.map((row) =>
-          row.map((cell) => cell.formattedValue)
-        );
-
-        if (rows.length === 0) return;
-
-        const headers = worksheetData.columns.map((column) => column.fieldName);
-
-        const keys = headers;
-        const values = rows;
-
-        let merged = [];
-        values.forEach((d) => {
-          merged.push(
-            keys.reduce((obj, key, index) => ({ ...obj, [key]: d[index] }), {})
+  const mainContent = (
+    <div>
+      <div style={{ position: "relative", float: "left" }}>
+        {printData.map((d, key) => {
+          return (
+            <div
+              id={"row" + key}
+              class="row"
+              onClick={() => selectMarks(d.State)}
+            >
+              <p style={{ paddingLeft: "20px" }}>
+                {d.State}: {d.value}
+              </p>
+            </div>
           );
-        });
-
-        let marksData = marks.data[0];
-        marksData = marksData.data.map((d) =>
-          d.map((cell) => cell.formattedValue)
-        );
-
-        let inputValue = document.getElementById("myInput").value;
-
-        let tmp = data;
-        let state = "";
-        marksData.forEach((d, i) => {
-          state = i === 0 ? d[0] : `${state}|${d[0]}`;
-        });
-
-        tmp.push({ State: state, value: inputValue });
-        let json = {
-          state: state,
-          value: inputValue,
-        };
-        fetch("https://oscarsapi.azurewebsites.net/api/countries", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(json),
-        }).then((res) => {
-          console.log("Request complete! response:", res);
-          document.getElementById("myInput").value = "";
-        });
-        setData(tmp);
-      });
-      //push to DB
-      //setApiData(tmp)
-      setIsLoading(false);
-      loadSelectedMarks();
-    }
-  };
-
-  const onClickDeleteBtn = (value) => {
-    if (value) {
-      const worksheet = getSelectedSheet();
-      setIsLoading(false);
-      worksheet.getSelectedMarksAsync().then((marks) => {
-        // Get the first DataTable for our selected marks (usually there is just one)
-        const worksheetData = marks.data[0];
-
-        // Map our data into the format which the data table component expects it
-        const rows = worksheetData.data.map((row) =>
-          row.map((cell) => cell.formattedValue)
-        );
-
-        if (rows.length === 0) return;
-
-        const headers = worksheetData.columns.map((column) => column.fieldName);
-
-        const keys = headers;
-        const values = rows;
-
-        let merged = [];
-        values.forEach((d) => {
-          merged.push(
-            keys.reduce((obj, key, index) => ({ ...obj, [key]: d[index] }), {})
-          );
-        });
-
-        let marksData = marks.data[0];
-        marksData = marksData.data.map((d) =>
-          d.map((cell) => cell.formattedValue)
-        );
-
-        let inputValue = document.getElementById("myInput").value;
-
-        let state = "";
-        marksData.forEach((d, i) => {
-          state = i === 0 ? d[0] : `${state}|${d[0]}`;
-        });
-        let tmp = data;
-        var index = data.indexOf(inputValue);
-        tmp.splice(index, 1);
-        setData(tmp);
-        let theUrl = "https://oscarsapi.azurewebsites.net/api/countries";
-        let json = {
-          State: state,
-          Value: inputValue,
-        };
-        let query = Object.keys(json)
-          .map((k) => encodeURIComponent(k) + "=" + encodeURIComponent(json[k]))
-          .join("&");
-        let url = theUrl + "?" + query;
-        fetch(url, {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-        })
-          .then((data) => data.text())
-          .then((text) => {
-            document.getElementById("myInput").value = "";
-          })
-          .catch(function (error) {
-            alert("request failed", error);
-          });
-        //
-      });
-      setIsLoading(false);
-      loadSelectedMarks();
-    }
-  };
-
-  const renderViz = () => {
-    addVizImage("bar", "tableau20_10_0");
-  };
+        })}
+      </div>
+      <div
+        id="viz-container"
+        style={{ position: "relative", float: "right" }}
+      ></div>
+    </div>
+  );
 
   let output = (
     <div>
@@ -420,13 +354,6 @@ function MainComponent() {
           <Button variant="link" onClick={() => setSelectedSheet(undefined)}>
             <img className="icon" src="./setting.svg" alt="" />
           </Button>
-          <Button
-            variant="link"
-            onClick={onResetFilters}
-            disabled={filteredFields.length === 0}
-          >
-            <img className="icon" src="./undo-arrow.svg" alt="" />
-          </Button>
         </h4>
         <div style={{ display: "inline", float: "left" }}>
           <input type="text" id="myInput" />
@@ -434,7 +361,7 @@ function MainComponent() {
         <div style={{ display: "inline", float: "left" }}>
           <TestBtnComponent
             btnValue="Click me to insert"
-            onClick={onClickTestBtn}
+            onClick={onClickInsertBtn}
           />
         </div>
         <div style={{ display: "inline", float: "left" }}>
@@ -455,20 +382,10 @@ function MainComponent() {
             onClick={onClickDeleteBtn}
           />
         </div>
-        {/* <input type="text" id="myInput2" style={{ float: "left" }} />
-        <TestBtnComponent
-          btnValue="Click  to update"
-          onClick={onClickUpdateBtn}
-          style={{ float: "left" }}
-        /> */}
       </div>
       {mainContent}
     </div>
   );
-
-  if (isLoading) {
-    output = <LoadingIndicatorComponent msg="Loading" />;
-  }
 
   if (!selectedSheet) {
     output = (

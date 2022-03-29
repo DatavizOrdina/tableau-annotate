@@ -9,7 +9,7 @@ function TestBtnComponent(props) {
         key={props.btnValue}
         variant="light"
         block
-        onClick={() => props.onClick(document.getElementById("myInput").value)}
+        onClick={() => props.onClick()}
       >
         {props.btnValue}
       </Button>
